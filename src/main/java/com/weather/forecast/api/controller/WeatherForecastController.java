@@ -24,11 +24,8 @@ import java.util.Date;
 import java.util.TimeZone;
 
 @RestController
-
 public class WeatherForecastController {
-
-
-    private static final Logger Log = LoggerFactory.getLogger(WeatherForecastController.class);
+    private static final Logger logger = LoggerFactory.getLogger(WeatherForecastController.class);
     @Autowired
     private WeatherForecastService weatherForecastService;
 
@@ -54,7 +51,59 @@ public class WeatherForecastController {
     })
     @GetMapping("/city/{city}/{type}")
     public String getWeatherByCity(@PathVariable String city, @PathVariable String type) {
-        return weatherForecastService.getWeatherByCity(city,type);
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
+        System.out.println("Api url :" + apiUrl);
+        System.out.println("Api key :" + apiKey);
+        logger.info("Constructed URL: {}", url);
+        logger.info("API Key: {}", apiKey);
+
+        RestTemplate restTemplate = new RestTemplate();
+        try {
+            Weather response = restTemplate.getForObject(url, Weather.class);
+
+            if (response != null) {
+                switch (type.toLowerCase()) {
+                    case "temp":
+                        if (response.getMain() != null) {
+                            return String.format("The temperature in %s is %.2f°C", city, response.getMain().getTemp());
+                        }
+                        break;
+                    case "humidity":
+                        if (response.getMain() != null) {
+                            return String.format("The humidity in %s is %d%%", city, response.getMain().getHumidity());
+                        }
+                        break;
+                    case "wind":
+                        if (response.getWind() != null) {
+                            return String.format("The wind speed in %s is %.2f m/s", city, response.getWind().getSpeed());
+                        }
+                        break;
+                    case "sunrise-sunset":
+                        if (response.getSys() != null) {
+                            long sunriseTimestamp = response.getSys().getSunrise() * 1000;
+                            long sunsetTimestamp = response.getSys().getSunset() * 1000;
+
+                            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
+                            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                            String sunriseTime = sdf.format(new Date(sunriseTimestamp));
+                            String sunsetTime = sdf.format(new Date(sunsetTimestamp));
+
+                            return String.format("In %s, the sunrise is at %s UTC and the sunset is at %s UTC", city, sunriseTime, sunsetTime);
+                        }
+                        break;
+                    default:
+                        return "Invalid weather type";
+                }
+            }
+        } catch (Exception e) {
+            logger.error("An error occurred while retrieving weather data for {}: {}", city, e.getMessage());
+            return String.format("An error occurred while retrieving weather data for %s: %s", city, e.getMessage());
+        }
+        return String.format("Could not retrieve %s data for %s", type, city);
     }
 
     @GetMapping("/api/temperature/{city}")
