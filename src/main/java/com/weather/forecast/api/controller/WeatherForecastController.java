@@ -12,17 +12,19 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
 @RestController
-@RequestMapping("/api")
+
 public class WeatherForecastController {
 
 
@@ -34,9 +36,11 @@ public class WeatherForecastController {
         this.weatherForecastService = weatherForecastService;
     }
 
-    private String apiKey;
-
+    @Value("${openweathermap.api.url}")
     private String apiUrl;
+
+    @Value("${openweathermap.api.key}")
+    private String apiKey;
 
 //    @Value("${weather.api.forecast.url}")
 //    private String forecastApiUrl;
@@ -48,14 +52,20 @@ public class WeatherForecastController {
             @ApiResponse(responseCode = "404", description = "The resource you were trying to reach is not found"),
             @ApiResponse(responseCode = "500", description = "City value can not be null")
     })
-    @GetMapping("/city/{city}")
+    @GetMapping("/city/{city}/{type}")
     public String getWeatherByCity(@PathVariable String city, @PathVariable String type) {
         return weatherForecastService.getWeatherByCity(city,type);
     }
 
-    @GetMapping("/temperature/{city}")
+    @GetMapping("/api/temperature/{city}")
     public String getTemperatureByCity(@PathVariable String city) {
-        String url = String.format("%s?q=%s&appid=%s&units=metric", apiUrl, city, apiKey);
+
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
+
         RestTemplate restTemplate = new RestTemplate();
         try {
             Weather response = restTemplate.getForObject(url, Weather.class);
@@ -71,7 +81,11 @@ public class WeatherForecastController {
 
     @GetMapping("/humidity/{city}")
     public String getHumidityByCity(@PathVariable String city) {
-        String url = String.format("%s?q=%s&appid=%s&units=metric", apiUrl, city, apiKey);
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
         RestTemplate restTemplate = new RestTemplate();
         Weather response = restTemplate.getForObject(url, Weather.class);
 
@@ -84,7 +98,11 @@ public class WeatherForecastController {
 
     @GetMapping("/wind/{city}")
     public String getWindByCity(@PathVariable String city) {
-        String url = String.format("%s?q=%s&appid=%s&units=metric", apiUrl, city, apiKey);
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
         RestTemplate restTemplate = new RestTemplate();
         Weather response = restTemplate.getForObject(url, Weather.class);
 
@@ -97,7 +115,11 @@ public class WeatherForecastController {
 
     @GetMapping("/forecast/{city}")
     public String getForecastByCity(@PathVariable String city) {
-        String url = String.format("%s?q=%s&appid=%s&units=metric", apiUrl, city, apiKey);
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
         RestTemplate restTemplate = new RestTemplate();
         WeatherResponse response = restTemplate.getForObject(url, WeatherResponse.class);
 
@@ -115,19 +137,24 @@ public class WeatherForecastController {
 
     @GetMapping("/sunrise-sunset/{city}")
     public String getSunriseSunsetByCity(@PathVariable String city) {
-        String url = String.format("%s?q=%s&appid=%s&units=metric", apiUrl, city, apiKey);
+        String url = UriComponentsBuilder.fromHttpUrl(apiUrl)
+                .queryParam("q", city)
+                .queryParam("appid", apiKey)
+                .queryParam("units", "metric")
+                .toUriString();
+
         RestTemplate restTemplate = new RestTemplate();
         Weather response = restTemplate.getForObject(url, Weather.class);
 
         if (response != null && response.getSys() != null) {
-            long sunriseTimestamp = response.getSys().getSunrise();
-            long sunsetTimestamp = response.getSys().getSunset();
+            long sunriseTimestamp = response.getSys().getSunrise() * 1000; // Convert to milliseconds
+            long sunsetTimestamp = response.getSys().getSunset() * 1000;   // Convert to milliseconds
 
             // Convert timestamps to readable date format
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String sunriseTime = sdf.format(new Date(sunriseTimestamp * 1000));
-            String sunsetTime = sdf.format(new Date(sunsetTimestamp * 1000));
+            String sunriseTime = sdf.format(new Date(sunriseTimestamp));
+            String sunsetTime = sdf.format(new Date(sunsetTimestamp));
 
             return String.format("In %s, the sunrise is at %s UTC and the sunset is at %s UTC", city, sunriseTime, sunsetTime);
         } else {
