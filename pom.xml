@@ -7,7 +7,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>spring-boot-weather-forecast-client-api</artifactId>
+    <artifactId>weather-forecast-api-java</artifactId>
     <packaging>jar</packaging>
 
     <properties>
